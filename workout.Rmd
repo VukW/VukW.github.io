@@ -5,7 +5,7 @@ date: "August 20, 2015"
 output: html_document
 block: "Data Science Specialization (8). Practical Machine Learning"
 ---
-A group of enthusiasts recorded they fitness activity and classified it into 6 manners.
+A group of enthusiasts recorded they fitness activity and classified it into 5 manners.
 The goal of this project is to find a patterns in their behavior and classify new examples into one of types.  
 
 # Content  
@@ -121,10 +121,11 @@ conf<-confusionMatrix(emptyval$classe, predict(trmod, emptyval[,-ny]))
 conf$table
 conf$overall["Accuracy"]
 val_error <- 1-conf$overall["Accuracy"]
+names(val_error)<-NULL
 val_error
 ```
-As we can see, estimated OOB error is lying between `r conf$overall["AccuracyLower"]` 
-and `r conf$overall["AccuracyUpper"]` with p-value 95%.  
+As we can see, estimated OOB error is lying between `r 1-conf$overall["AccuracyUpper"]` 
+and `r 1-conf$overall["AccuracyLower"]` with p-value 95%.  
 
 ##7. prediction on the testset  
 

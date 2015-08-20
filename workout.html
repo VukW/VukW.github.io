@@ -68,7 +68,7 @@ img {
 </div>
 
 
-<p>A group of enthusiasts recorded they fitness activity and classified it into 6 manners. The goal of this project is to find a patterns in their behavior and classify new examples into one of types.</p>
+<p>A group of enthusiasts recorded they fitness activity and classified it into 5 manners. The goal of this project is to find a patterns in their behavior and classify new examples into one of types.</p>
 <div id="content" class="section level1">
 <h1>Content</h1>
 <ol style="list-style-type: decimal">
@@ -218,10 +218,10 @@ conf&lt;-confusionMatrix(emptyval$classe, predict(trmod, emptyval[,-ny]))</code>
 <pre><code>##  Accuracy 
 ## 0.9942723</code></pre>
 <pre class="r"><code>val_error &lt;- 1-conf$overall[&quot;Accuracy&quot;]
+names(val_error)&lt;-NULL
 val_error</code></pre>
-<pre><code>##    Accuracy 
-## 0.005727675</code></pre>
-<p>As we can see, estimated OOB error is lying between 0.991341 and 0.9964071 with p-value 95%.</p>
+<pre><code>## [1] 0.005727675</code></pre>
+<p>As we can see, estimated OOB error is lying between 0.0035929 and 0.008659 with p-value 95%.</p>
 </div>
 <div id="prediction-on-the-testset" class="section level2">
 <h2>7. prediction on the testset</h2>
