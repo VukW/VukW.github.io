@@ -1,0 +1,150 @@
+---
+title: "Classification of fitness activity"
+author: "Vuk W"
+date: "August 20, 2015"
+output: html_document
+block: "Data Science Specialization (8). Practical Machine Learning"
+---
+A group of enthusiasts recorded they fitness activity and classified it into 6 manners.
+The goal of this project is to find a patterns in their behavior and classify new examples into one of types.  
+
+# Content  
+
+1. preparing environment (libraries)  
+2. reading raw values  
+3. preparing data for analysis  
+4. splitting data into train / validation sets  
+5. training model on train set  
+6. estimating out-of-bag error on train and validation sets  
+7. predicting new values on test set and writing down the answers  
+8. conclusion  
+
+##1. Libraries
+For analysis we''ll use caret library that provides a lot of instruments for pedicting / splitting etc
+```{r libraries}
+library(caret)
+library(ggplot2)
+```
+
+##2. reading raw values
+
+```{r reading}
+set.seed(514229)
+nastr <- c("NA", "#DIV/0!","")
+trainingRaw<-read.csv("pml-training.csv", na.strings = nastr)
+testingRaw<-read.csv("pml-testing.csv" , na.strings = nastr)
+dim(trainingRaw)
+```
+
+##3. Preparing data for analysis
+
+I'll not provide summary for raw training set because of its huge number of columns, but
+it could be easily seen that whole dataset could be splitted into two parts:  
+  -part with field "new_window" == "yes", with almost all columns fulfilled;  
+  -part with field "new_window" == "no", with 101 columns empty.
+
+In my opinion, such data should be analysed separately with different approaches and
+ maybe different models.
+But raw test set has only values with "new_window" == "no", thus we will build only this
+model and leave first part of data out of here.
+```{r prepairing_1}
+n<-ncol(trainingRaw)
+#retaining only not-new-window data
+emptystrs<-trainingRaw$new_window == "no"
+emptytrain<-trainingRaw[emptystrs,]
+emptycols<-NULL
+#go through all columns and drop columns with 0 or 1 different values
+for (i in 1:n){
+  
+  if (is.factor(emptytrain[,i])){
+    emptytrain[,i]<-droplevels(emptytrain[,i])
+  }
+  if (length(levels(as.factor(emptytrain[,i])))<=1){
+    emptycols<-c(emptycols,i)
+  }
+}
+head(training[,1:7])
+```
+Also first seven columns of training set have values that we can receive only in
+training but not in real life. They are higly correlated with result activity class:  
+```{r preparing_2}
+qplot(raw_timestamp_part_1,num_window, color = classe, data = training[(training$new_window == "no")&(training$raw_timestamp_part_1 < 1322600000),])
+```
+
+We will exclude such columns from analysis too.  
+```{r preparing_3}
+#add to emptycols some experiment variables
+emptycols<-c(emptycols, 1:7)
+```
+
+And eventually we get a grid with data readly for predicting:
+```{r preparing_4}
+emptytrain<-emptytrain[,-emptycols]
+emptytest<-testing[,-emptycols]
+emptytest<-emptytest[,-ncol(emptytest)]
+colnames(emptytrain)
+```
+
+##4. splitting raw train data into train and validation sets  
+
+```{r splitting}
+trainId<-createDataPartition(emptytrain$classe, p = 0.8, list = F)
+emptyval<-emptytrain[-trainId,]
+emptytrain<-emptytrain[trainId,]
+```
+
+##5. Training model  
+
+In order to predict new values of classe we will train random forest model.
+As a metrics for training we will use out-of-bag error.
+Usually metrics error on training dataset is lower limit for error on real data.
+```{r training, cache=TRUE}
+trmod<-NULL
+trmod<-train(classe~., data = emptytrain, method = "rf", trControl = trainControl(method = "oob"))
+trmod$finalModel
+layout(matrix(c(1,2),nrow=1), width=c(4,1)) 
+par(mar=c(5,4,4,0)) #No margin on the right side
+plot(trmod$finalModel, log="y")
+par(mar=c(5,0,4,0)) #No margin on the left side
+plot(c(0,1),type="n", axes=F, xlab="", ylab="")
+legend("top", colnames(trmod$finalModel$err.rate),col=1:6,cex=0.8,fill=1:6)
+```
+
+##6. Estimating out-of-bag error rate  
+
+As we can see, training set shows lower limit for OOB error rate = **`r trmod$finalModel$err.rate[nrow(trmod$finalModel$err.rate),"OOB"]*100`%**.  
+Lets get error classification on validation set:
+```{r err_validation}
+#column number for observed validation class
+ny<-ncol(emptyval)
+conf<-confusionMatrix(emptyval$classe, predict(trmod, emptyval[,-ny]))
+conf$table
+conf$overall["Accuracy"]
+val_error <- 1-conf$overall["Accuracy"]
+val_error
+```
+As we can see, estimated OOB error is lying between `r conf$overall["AccuracyLower"]` 
+and `r conf$overall["AccuracyUpper"]` with p-value 95%.  
+
+##7. prediction on the testset  
+
+```{r pred_test}
+answers<-predict(trmod,emptytest)
+n = length(answers)
+for(i in 1:n){
+  filename = paste0("problem_id_",i,".txt")
+  write.table(answers[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+}
+```
+
+##8. Conclusion  
+
+Data was analysed by RandomForest model and estimated accuracy above **99%** was discovered. Out-of-bag error on validation set lays between `r conf$overall["AccuracyLower"]` 
+and `r conf$overall["AccuracyUpper"]` with p-value 95%.  
+top 10 most important variables are:
+```{r conclusion}
+vi<-varImp(trmod$finalModel)
+vi$varnames<-rownames(vi)
+rownames(vi)<-NULL
+head(vi[order(vi$Overall, decreasing = T),],10)
+```
